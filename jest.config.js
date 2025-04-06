@@ -9,7 +9,8 @@ export default {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html'],
   collectCoverageFrom: [
-    '**/dropdown.js',   // <- adjust to match the file you're testing
+    '**/*.js',   // <- adjust to match the file you're testing
+    '!**/coverage/**', // Exclude coverage directory,
     '!**/node_modules/**',
     '!**/tests/**',
   ],
