@@ -38,5 +38,5 @@ tmp/
 temp/
 *.tmp
 
-# Other
-.DS_Store
+
+coverage/
