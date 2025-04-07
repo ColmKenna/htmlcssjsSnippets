@@ -1,0 +1,156 @@
+/* Global styles remain unchanged */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    color: #333;
+    margin: 0;
+}
+
+@media (min-width: 600px) {
+    body {
+        padding: 60px 10px;
+    }
+}
+
+h1 {
+    margin: 0;
+    font-family: serif;
+    font-size: 36px;
+}
+
+p {
+    margin-top: 20px;
+    margin-bottom: 0;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1.5;
+}
+
+/* Make styles specific to elements within .tabs */
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    background: #e5e5e5;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    align-items: stretch;
+    width: 80%;
+}
+
+.tabs .tabs-panel-input {
+    position: absolute;
+    opacity: 0;
+}
+
+.tabs .tab-heading {
+    width: 100%;
+    padding: 20px 30px;
+    background: #e5e5e5;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 18px;
+    color: #7f7f7f;
+    transition: background 0.1s, color 0.1s;
+    border-bottom: 1px solid #ccc;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.tabs .tab-heading:hover {
+    background: #d8d8d8;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Rounded corners for the first tab on hover */
+.tabs .tab-heading:first-of-type:hover {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+/* Rounded corners for the last tab on hover */
+.tabs .tab-heading:last-of-type:hover {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+.tabs .tab-heading:active {
+    background: #ccc;
+}
+
+.tabs .tabs-panel-input:focus + .tab-heading {
+    z-index: 1;
+}
+
+.tabs .tabs-panel-input:checked + .tab-heading {
+    background: #e5e5e5;
+    color: #333;
+}
+
+.tabs .tabs-panel-input:not(:checked) + .tab-heading:last-of-type {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.tabs .panel {
+    display: none;
+    background: #fff;
+    width: 100%;    
+    height: 450px    ;
+    overflow: hidden;
+}
+.tabs .panel .panel-content {
+    width: 100%;    
+    height: 100%;
+    padding: 20px 30px 30px;
+    overflow-x: hidden;
+    overflow-y: auto; 
+}
+
+
+.tabs .panel:last-of-type {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+
+@media (min-width: 600px) {
+    .tabs .tab-heading {
+        width: auto;
+        border-bottom: none;
+    }
+
+    .tabs .panel {
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+    .tabs .tab-heading {
+        border-radius: 8px 8px 0 0;        
+    }
+
+    .tabs .tab-heading:hover {
+        background: #d8d8d8;
+        border-radius: 8px ;
+    }
+
+    .tabs .tabs-panel-input:checked + .tab-heading {
+        background: #fff;
+        color: #000;
+        border-bottom: 2px solid #ccc;
+    }
+
+    .tabs .panel {
+        order: 99;
+    }
+    
+}
+
+.tabs .tabs-panel-input:checked + .tab-heading + .panel {
+    display: block;
+}
