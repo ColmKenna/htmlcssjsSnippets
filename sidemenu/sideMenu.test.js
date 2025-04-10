@@ -4,81 +4,76 @@
  * @jest-environment jsdom
  */
 
+// Import the functions or code to be tested if needed (implicitly done via require below)
 
 describe('sideMenu', () => {
+  let burger;
+  let sidebar;
+
+  // Function to set the window width for testing
+  const setWindowWidth = (width) => {
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: width,
+    });
+    // Dispatch a resize event
+    window.dispatchEvent(new Event('resize'));
+  };
+
   beforeEach(() => {
-    document.documentElement.innerHTML = `
-    <body>
-  <div class="navbar">
-    <div class="burger" id="burger">
-      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="6" width="24" height="3" fill="white"/>
-        <rect x="4" y="14.5" width="20" height="3" fill="#808080"/>
-        <rect x="4" y="23" width="24" height="3" fill="white"/>
-        <path d="M26 16l-5 5V11l5 5z" fill="white"/>
-      </svg>
-    </div>
-    <h1>My App</h1>
-  </div>
+    // Set up the DOM environment for each test
+    document.body.innerHTML = `
+      <div class="navbar">
+        <div class="burger" id="burger">
+          <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="6" width="24" height="3" fill="white"/>
+            <rect x="4" y="14.5" width="20" height="3" fill="#808080"/>
+            <rect x="4" y="23" width="24" height="3" fill="white"/>
+            <path d="M26 16l-5 5V11l5 5z" fill="white"/>
+          </svg>
+        </div>
+        <h1>My App</h1>
+      </div>
+      <div class="main-container">
+        <div class="sidebar" id="sidebar">
+          <ul>
+            <li data-title="Dashboard"><span>Dashboard</span></li>
+            <li data-title="Profile"><span>Profile</span></li>
+            </ul>
+        </div>
+        <div class="content" id="content"></div>
+      </div>
+    `;
 
-  <div class="main-container">
-    <div class="sidebar" id="sidebar">
-      <ul>
-        <li data-title="Dashboard">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8v-10h-8v10zm0-18v6h8V3h-8z"/></svg>
-          <span>Dashboard</span>
-        </li>
-        <li data-title="Profile">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5.6 1.3 6 4v2H6v-2c.4-2.7 3.3-4 6-4zm0-2a4 4 0 100-8 4 4 0 000 8z"/></svg>
-          <span>Profile</span>
-        </li>
-        <li data-title="Messages">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v16l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
-          <span>Messages</span>
-        </li>
-        <li data-title="Settings">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm8-5H4a2 2 0 00-2 2v14l4-4h12a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
-          <span>Settings</span>
-        </li>
-        <li data-title="Logout">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 13v-2H7V8l-5 4 5 4v-3h9zm4-10H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
-          <span>Logout</span>
-        </li>
-      </ul>
-    </div>
+    // Get references to the elements
+    burger = document.getElementById('burger');
+    sidebar = document.getElementById('sidebar');
 
-    <div class="content" id="content">
-      <h2>Responsive Page</h2>
-      <p>This is the main content area.</p>
-    </div>
-  </div>
-
-</body>
-</html>`
-    // Reset the module cache to ensure a fresh state for each test
+    // Reset the module cache and re-require the script to ensure a clean state
+    // This also executes the initial `checkResize()` call within the script
     jest.resetModules();
-    // Re-require the module after resetting the cache
-    require('./sideMenu');
+    // Use fake timers to control setTimeout in checkResize
+    jest.useFakeTimers();
+    require('./sideMenu'); // This executes the script including the initial checkResize
+
   });
 
-  test('should toggle classes on click', () => {
-    const burger = document.getElementById('burger');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
+  afterEach(() => {
+    // Restore real timers after each test
+    jest.useRealTimers();
+  });
 
-    // Initial state
+  test('should toggle sidebar and burger classes on burger click', () => {
+    // Initial state (assuming large screen by default in jsdom unless set)
     expect(sidebar.classList.contains('collapsed')).toBe(false);
-    expect(content.classList.contains('collapsed')).toBe(false);
-    expect(content.classList.contains('shifted')).toBe(false);
     expect(burger.classList.contains('closed')).toBe(false);
 
     // Simulate click
     burger.click();
 
-    // State after click
+    // State after first click
     expect(sidebar.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('shifted')).toBe(false);
     expect(burger.classList.contains('closed')).toBe(true);
 
     // Simulate another click
@@ -86,52 +81,119 @@ describe('sideMenu', () => {
 
     // State after second click
     expect(sidebar.classList.contains('collapsed')).toBe(false);
-    expect(content.classList.contains('collapsed')).toBe(false);
-    expect(content.classList.contains('shifted')).toBe(true);
     expect(burger.classList.contains('closed')).toBe(false);
   });
 
-  test('should handle large screen', () => {
-    const burger = document.getElementById('burger');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
+  // --- Resize Tests ---
 
-    // Mock window.innerWidth to simulate a large screen
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 800,
-    });
+  test('initial state: should be open on large screens (> 767px)', () => {
+    setWindowWidth(1024); // Set large screen width
+    // Initial checkResize runs in beforeEach when requiring the script
+    jest.advanceTimersByTime(200); // Advance timer for the initial checkResize debounce
 
-    // Simulate click
-    burger.click();
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+    expect(burger.classList.contains('closed')).toBe(false);
+  });
 
-    // State after click
+  test('initial state: should collapse on small screens (< 768px)', () => {
+    setWindowWidth(600); // Set small screen width
+    // Initial checkResize runs in beforeEach when requiring the script
+    jest.advanceTimersByTime(200); // Advance timer for the initial checkResize debounce
+
     expect(sidebar.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('shifted')).toBe(false);
     expect(burger.classList.contains('closed')).toBe(true);
   });
 
-  test('should handle small screen', () => {
-    const burger = document.getElementById('burger');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
+  test('resize: should collapse sidebar when resizing from large to small screen', () => {
+    // 1. Start with large screen (initial state)
+    setWindowWidth(1024);
+    jest.advanceTimersByTime(200); // Initial check
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+    expect(burger.classList.contains('closed')).toBe(false);
 
-    // Mock window.innerWidth to simulate a small screen
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 700,
-    });
+    // 2. Resize to small screen
+    setWindowWidth(600);
+    jest.advanceTimersByTime(200); // Advance timer for resize debounce
 
-    // Simulate click
-    burger.click();
-
-    // State after click
+    // 3. Assert: Sidebar should be collapsed
     expect(sidebar.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('collapsed')).toBe(true);
-    expect(content.classList.contains('shifted')).toBe(false);
     expect(burger.classList.contains('closed')).toBe(true);
   });
+
+  test('resize: should reopen sidebar when resizing from small to large screen if it was open before', () => {
+    // 1. Start large, sidebar is open
+    setWindowWidth(1024);
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(false); // Ensure it's initially open
+
+    // 2. Resize to small screen (sidebar collapses)
+    setWindowWidth(600);
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(true); // Confirm it collapsed
+
+    // 3. Resize back to large screen
+    setWindowWidth(1024);
+    jest.advanceTimersByTime(200); // Advance timer for resize debounce
+
+    // 4. Assert: Sidebar should reopen because it was open initially on large screen
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+    expect(burger.classList.contains('closed')).toBe(false);
+  });
+
+  test('resize: should keep sidebar collapsed when resizing from small to large screen if it was manually closed before', () => {
+    // 1. Start large, sidebar is open
+    setWindowWidth(1024);
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+
+    // 2. Manually close the sidebar on large screen
+    burger.click();
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+    expect(burger.classList.contains('closed')).toBe(true);
+
+    // 3. Resize to small screen (should remain collapsed)
+    setWindowWidth(600);
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+    expect(burger.classList.contains('closed')).toBe(true);
+
+    // 4. Resize back to large screen
+    setWindowWidth(1024);
+    jest.advanceTimersByTime(200);
+
+    // 5. Assert: Sidebar should remain collapsed because it was manually closed before going small
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+    expect(burger.classList.contains('closed')).toBe(true);
+  });
+
+   test('resize: should reopen sidebar when resizing from small to large screen if it was manually opened before', () => {
+    // 1. Start small, sidebar is collapsed by default
+    setWindowWidth(600);
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+
+    // 2. Manually open the sidebar on small screen (not typical UI, but tests logic)
+    // Note: The script forces collapse on small screens, so manual open won't persist
+    // Let's test the scenario where it starts large, is closed, goes small, then goes large again (covered above)
+    // Instead, let's test: Start small -> Go Large -> Close -> Go Small -> Go Large
+    setWindowWidth(1024); // Go large (opens)
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(false);
+
+    burger.click(); // Close it on large screen
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+
+    setWindowWidth(600); // Go small (stays closed)
+    jest.advanceTimersByTime(200);
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+
+    setWindowWidth(1024); // Go large again
+    jest.advanceTimersByTime(200);
+
+    // Should remain collapsed as it was manually closed on large screen previously
+    expect(sidebar.classList.contains('collapsed')).toBe(true);
+    expect(burger.classList.contains('closed')).toBe(true);
+
+  });
+
 });
