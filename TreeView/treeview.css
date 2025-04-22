@@ -1,0 +1,75 @@
+ul.tree, ul.tree ul {
+    list-style-type: none;
+    margin: 0;
+    padding-left: 1em;
+    position: relative;
+}
+ul.tree ul {
+    display: none;
+}
+ul.tree li {
+    margin: 0.2em 0;
+    cursor: pointer;
+}
+ul.tree li.open > ul {
+    display: block;
+}
+/* ul.tree li:before {
+    content: '\25B6'; 
+    display: inline-block;
+    margin-right: 0.3em;
+    transition: transform 0.2s;
+}
+ul.tree li.open:before {
+    transform: rotate(90deg);
+} 
+ul.tree li:not(:has(ul))::before {
+    content: '';
+    margin-right: 1.1em;
+}*/
+ul.tree li.dragging {
+    opacity: 0.5;
+}
+ul.tree li.drag-over {
+    border: 2px dashed #000;
+}
+
+.drop-zone {
+    height: 6px;
+    margin: 0 -8px;
+    background: transparent;
+}
+.drop-zone.active {
+    background: #4a90e2;
+}
+.drop-zone.before {
+    border-top: 2px solid transparent;
+}
+.drop-zone.after {
+    border-bottom: 2px solid transparent;
+}
+.drop-zone.before.active {
+    border-top: 2px solid #4a90e2;
+}
+.drop-zone.after.active {
+    border-bottom: 2px solid #4a90e2;
+}
+
+.tree-arrow {
+    display: inline-block;
+    width: 1em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.treeview-node, .treeview-leaf  {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+    transition: background 0.2s;
+    gap: 0.5em;
+}
+.treeview-node:hover, .treeview-leaf:hover {
+    background: #e6f0fa;
+}

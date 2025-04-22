@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TreeView Example</title>
+    <link rel="stylesheet" href="treeview.css">
+</head>
+<body>
+    <h1>TreeView JSON Hierarchy Example</h1>
+     <script src="treeview.js"></script>    
+    <script>
+        // Initial tree data
+        const initialTreeData = [
+            {
+                id: 1,
+                label: "Root",
+                children: [
+                    {
+                        id: 2,
+                        label: "Child 1",
+                        children: [
+                            { id: 3, label: "Grandchild 1", children: [
+                                { id: 10, label: "Great Grandchild 3", children: [] },
+                                { id: 11, label: "Great Grandchild 4", children: [
+                                    { id: 14, label: "Great-Great Grandchild 1", children: [] }
+                                ] }
+                            ] },
+                            { id: 4, label: "Grandchild 2", children: [
+                                { id: 7, label: "Great Grandchild 1", children: [] },
+                                { id: 8, label: "Great Grandchild 2", children: [] }
+                            ] }
+                        ]
+                    },
+                    {
+                        id: 5,
+                        label: "Child 2",
+                        children: [
+                            { id: 6, label: "Grandchild 3", children: [
+                                { id: 12, label: "Great Grandchild 5", children: [] },
+                                { id: 13, label: "Great Grandchild 6", children: [] }
+                            ] }
+                        ]
+                    },
+                    {
+                        id: 9,
+                        label: "Child 3",
+                        checked: true,
+                        children: [
+                            { id: 15, label: "Grandchild 4", children: [] }
+                        ]
+                    },
+                    {
+                        id: 16,
+                        label: "Child 4",
+                        children: []
+                    }
+                ]
+            },
+            {
+                id: 100,
+                label: "Root 2",
+                children: [
+                    { id: 101, label: "Child A", children: [] },
+                    { id: 102, label: "Child B", children: [
+                        { id: 103, label: "Grandchild B1", children: [] }
+                    ] }
+                ]
+            }
+        ];
+        // Initialize the treeview with the data
+        document.addEventListener('DOMContentLoaded', function() {
+            initTreeView('treeview-container', initialTreeData, 'json-view' );
+            const treeviewContainer = document.getElementById('treeview-container');
+            treeviewContainer.addEventListener('treeview:beforedrop', function(e) {
+                // Prevent drop if the dragged node is a root node (no parent)
+                if (e.detail && e.detail.draggedNode) {
+                    // A root node has no parent in parentMap
+                    const tree = treeviewContainer.TreeViewInstance;
+                    // Fallback: check if parentMap exists and use it, otherwise check if node is in top-level data
+                    let isRoot = false;
+                    if (tree && tree.parentMap) {
+                        isRoot = !tree.parentMap.has(e.detail.draggedNode.id);
+                    } else if (Array.isArray(initialTreeData)) {
+                        isRoot = initialTreeData.some(n => n.id === e.detail.draggedNode.id);
+                    }
+                    if (isRoot) {
+                        e.preventDefault();
+                        logEvent('treeview:beforedrop (prevented - root node)', e.detail);
+                    }
+                }
+            });
+            treeviewContainer.addEventListener('treeview:beforedrop', e => logEvent('treeview:beforedrop', e.detail));
+            treeviewContainer.addEventListener('treeview:afterdrop', e => logEvent('treeview:afterdrop', e.detail));
+            treeviewContainer.addEventListener('treeview:nodedrop', e => logEvent('treeview:nodedrop', e.detail));
+        });
+
+        function logEvent(eventName, detail) {
+            const logDiv = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString();
+            const msg = `[${time}] ${eventName}:\n` + JSON.stringify(detail, null, 2) + '\n\n';
+            logDiv.textContent = msg + logDiv.textContent;
+        }
+    </script>
+
+    <div id="treeview-container">
+        <template name="treeview-leaf-template">
+            <div class="treeview-leaf" data-id="{{id}}">
+                <span class="treeview-label">{{label}}</span>
+            </div>
+        </template>
+        <template name="treeview-node-template">
+            <div class="treeview-node" data-id="{{id}}">
+                <span class="treeview-label">{{label}}</span>
+                <div class="treeview-children">wwwww aa</div>
+            </div>
+        </template>
+    </div>
+
+    <div id="json-view" style="margin-top:2em; padding:1em; background:#f7f7f7; border:1px solid #ccc; font-family:monospace; white-space:pre; max-height:300px; overflow:auto;"></div>
+
+    <div id="event-log" style="margin-top:2em; padding:1em; background:#eef; border:1px solid #99c; font-family:monospace; white-space:pre; max-height:200px; overflow:auto;"></div>
+
+</body>
+</html>
