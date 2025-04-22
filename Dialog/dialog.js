@@ -1,21 +1,18 @@
 // Dialog JS for reusable dialogs by dialog id
 
 function setupDialog(openBtn) {
-  const dialogId = openBtn.getAttribute('data-dialog-id');
-  const dialog = document.getElementById(dialogId);
-  if (!dialog) return;
-
-  openBtn.addEventListener('click', () => handleOpenDialog(dialog));
-
-  // Cancel buttons inside this dialog
-  dialog.querySelectorAll('.cancelBtn').forEach(btn => {
-    btn.addEventListener('click', () => handleCancel(dialog, btn));
-  });
-
-  // Confirm button inside this dialog
-  const confirmBtn = dialog.querySelector('.confirmBtn');
-  if (confirmBtn) {
-    confirmBtn.addEventListener('click', () => handleConfirm(dialog, confirmBtn));
+  const dialogId = openBtn.dataset.dialogId;
+  if (dialogId) {
+    const dialog = document.getElementById(dialogId);
+    if (dialog) {
+      openBtn.addEventListener('click', () => handleOpenDialog(dialog));
+      
+      const cancelBtns = dialog.querySelectorAll('.cancelBtn');
+      cancelBtns.forEach(btn => btn.addEventListener('click', () => handleCancel(dialog, btn)));
+      
+      const confirmBtns = dialog.querySelectorAll('.confirmBtn');
+      confirmBtns.forEach(btn => btn.addEventListener('click', () => handleConfirm(dialog, btn)));
+    }
   }
 }
 
@@ -23,52 +20,71 @@ function handleOpenDialog(dialog) {
   dialog.showModal();
 }
 
-function handleCancel(dialog, cancelbtn) {
-    const values = {};
-    const inputIds = (cancelbtn.dataset.inputIds || '').split(',').filter(Boolean);
-    inputIds.forEach(id => {
-      const input = dialog.querySelector(`#${id}`);
-      if (input) values[id] = input.value;
-    });
-  clearInputs(dialog);
-  dialog.close();
-  const cancelEvent = new CustomEvent('dialogCancelled', {
-    detail: { dialogId: dialog.id , values }
+function handleCancel(dialog, btn) {
+  const inputIds = btn.dataset.inputIds ? btn.dataset.inputIds.split(',') : [];
+  // Collect input values before clearing
+  const values = {};
+  inputIds.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      values[id] = input.value;
+    }
   });
-  dialog.dispatchEvent(cancelEvent);
+  
+  dialog.close();
+  clearInputs(dialog);
+  
+  // Dispatch event with values
+  const event = new CustomEvent('dialogCancelled', {
+    detail: {
+      dialogId: dialog.id,
+      values: values
+    }
+  });
+  dialog.dispatchEvent(event);
 }
 
-function handleConfirm(dialog, confirmBtn) {
-  const inputIds = (confirmBtn.dataset.inputIds || '').split(',').filter(Boolean);
+function handleConfirm(dialog, btn) {
+  const inputIds = btn.dataset.inputIds ? btn.dataset.inputIds.split(',') : [];
   confirmedClicked(dialog, inputIds);
 }
 
 function confirmedClicked(dialog, inputIds) {
   const values = {};
   inputIds.forEach(id => {
-    const input = dialog.querySelector(`#${id}`);
-    if (input) values[id] = input.value;
+    const input = document.getElementById(id);
+    if (input) {
+      values[id] = input.value;
+    }
   });
-  clearInputs(dialog);
+  
   dialog.close();
-  console.log('Confirmed!');
-  console.log('Dialog ID:', dialog.id);
-  console.log('Input Values:', values);
-  const confirmEvent = new CustomEvent('dialogConfirmed', {
-    detail: { dialogId: dialog.id, values }
+  clearInputs(dialog);
+  
+  // Dispatch event with values
+  const event = new CustomEvent('dialogConfirmed', {
+    detail: {
+      dialogId: dialog.id,
+      values: values
+    }
   });
-  dialog.dispatchEvent(confirmEvent);
+  dialog.dispatchEvent(event);
 }
 
 function clearInputs(dialog) {
-  dialog.querySelectorAll('input').forEach(input => input.value = '');
+  const inputs = dialog.querySelectorAll('input');
+  inputs.forEach(input => {
+    input.value = '';
+  });
 }
 
-// Initialize all dialogs
-document.querySelectorAll('[data-dialog-id]').forEach(setupDialog);
+// Initialize all dialogs once the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-dialog-id]').forEach(setupDialog);
+});
 
-// For testability
-if (typeof module !== 'undefined') {
+// For testability (CommonJS environment)
+if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     setupDialog,
     handleOpenDialog,

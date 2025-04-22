@@ -33,8 +33,9 @@
     const formDialog = document.getElementById('formDialog');
     if (formDialog) {
       formDialog.addEventListener('dialogConfirmed', (e) => {
-        console.log('Custom Event Caught:', e.detail);
+        console.log('Confirm Event Caught:', e.detail);
       });
+
       formDialog.addEventListener('dialogCancelled', (e) => {
         console.log('Cancel Event Caught:', e.detail);
       });
