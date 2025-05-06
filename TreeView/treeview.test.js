@@ -1,577 +1,450 @@
-const  TreeViewModule  = require('./treeview');
-const { TreeView } = TreeViewModule;
+const { describe, test, expect, beforeEach } = require('@jest/globals');
+const { TreeNode, Tree } = require('./TreeView');
+const {EventEmitter} = require('../EventEmitter/EventEmitter'); 
 
-describe('TreeView', () => {
-  let container;
-  let leafTemplate;
-  let nodeTemplate;
+describe('TreeNode', () => {
+  let parent, child, child1, child2, grandchild, eventEmitter;
 
   beforeEach(() => {
-    container = document.createElement('div');
-    container.classList.add('tree-view');
-    container.id = 'tree-view-container';
-
-    // Add required template elements as in index.html
-    leafTemplate = document.createElement('template');
-    leafTemplate.setAttribute('name', 'treeview-leaf-template');
-
-    leafTemplate.innerHTML = `
-      <div class="treeview-leaf" data-id="{{id}}">
-        <span class="treeview-label">{{label}}</span>
-      </div>
-    `;
-    container.appendChild(leafTemplate);
-
-    nodeTemplate = document.createElement('template');
-    nodeTemplate.setAttribute('name', 'treeview-node-template');
-    nodeTemplate.innerHTML = `
-      <div class="treeview-node" data-id="{{id}}">
-        <span class="treeview-label">{{label}}</span>
-        <div class="treeview-children"></div>
-      </div>
-    `;
-    container.appendChild(nodeTemplate);
-
-    document.body.appendChild(container);
+    parent = new TreeNode({ id: 'p', label: 'Parent' });
+    child = new TreeNode({ id: 'c', label: 'Child' });
+    child1 = new TreeNode({ id: 'c1', label: 'Child 1' });
+    child2 = new TreeNode({ id: 'c2', label: 'Child 2' });
+    grandchild = new TreeNode({ id: 'gc', label: 'Grandchild' });
+    eventEmitter = new EventEmitter();
   });
 
-  afterEach(() => {
-    document.body.removeChild(container);
-    container = null;
+  test('TreeNode constructor sets parent on children', () => {
+    const localChild = new TreeNode({ id: 'child1', label: 'Child' });
+    const localParent = new TreeNode({ id: 'p1', label: 'Parent', children: [localChild] });
+    expect(localChild.parent).toBe(localParent);
   });
 
-  it('should render the tree view correctly', () => {
-    const treeData = [
-      { id: 1, label: 'Node 1', checked: false },
-      { id: 2, label: 'Node 2', checked: true },
-    ];
-
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    const nodes = container.querySelectorAll('.treeview-li');
-    expect(nodes.length).toBe(2);
-    expect(nodes[0].querySelector('.treeview-label').textContent).toBe('Node 1');
-    expect(nodes[1].querySelector('.treeview-label').textContent).toBe('Node 2');
+  test('setChecked triggers callback', () => {
+    const node = new TreeNode({ id: 'n', label: 'N' });
+    const mockCallback = jest.fn();
+    node.setChecked(true, mockCallback);
+    expect(mockCallback).toHaveBeenCalledWith(node);
   });
 
-  it('should render the leaf nodes from the template', () => {
-    const treeData = [
-      { id: 1, label: 'Node 1', checked: false },
-      { id: 2, label: 'Node 2', checked: true },
-    ];
+  test('updateCheckStateFromChildren sets checked = false and triggers callback if all unchecked', () => {
+    const localParent = new TreeNode({ id: 'p', label: 'Parent' });
+    const localC1 = new TreeNode({ id: 'child1', label: 'C1', checked: false });
+    const localC2 = new TreeNode({ id: 'child2', label: 'C2', checked: false });
 
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
+    localParent.addChild(localC1);
+    localParent.addChild(localC2);
 
-    const leafTemplate = container.querySelector('template[name="treeview-leaf-template"]');
-    expect(leafTemplate).not.toBeNull();
+    const cb = jest.fn();
+    localParent.updateCheckStateFromChildren(cb);
 
-    const leafNodes = container.querySelectorAll('.treeview-leaf');
-    expect(leafNodes.length).toBe(2);
-    expect(leafNodes[0].getAttribute('data-id')).toBe('1');
-    expect(leafNodes[1].getAttribute('data-id')).toBe('2');
-    expect(leafNodes[0].querySelector('.treeview-label').textContent).toBe('Node 1');
-    expect(leafNodes[1].querySelector('.treeview-label').textContent).toBe('Node 2');
+    expect(localParent.checked).toBe(false);
+    expect(cb).toHaveBeenCalledWith(localParent);
   });
 
-  it('should render the branch nodes from the template', () => {
-    const treeData = [
-      {
-        id: 1,
-        label: 'Parent',
-        checked: false,
-        children: [
-          { id: 2, label: 'Child', checked: true }
-        ]
-      }
-    ];
+  test('insertChildAt bounds correction', () => {
+    parent.insertChildAt(child, -5);
+    expect(parent.children[0]).toBe(child);
 
-    const treeView = new TreeView(container.id, treeData);
-    treeView.openIds.add(1); // Open the parent node to render children
-    treeView.render();
-
-
-    const branchNodes = container.querySelectorAll('.treeview-node');
-    expect(branchNodes.length).toBe(1);
-    expect(branchNodes[0].getAttribute('data-id')).toBe('1');
-    expect(branchNodes[0].querySelector('.treeview-label').textContent).toBe('Parent');
+    const child2 = new TreeNode({ id: 'child2', label: 'Child2' });
+    parent.insertChildAt(child2, 100);
+    expect(parent.children[1]).toBe(child2);
   });
 
-  it('should set the checkbox based on checked', () => {
-    const treeData = [
-      { id: 1, label: 'Node 1', checked: false },
-      { id: 2, label: 'Node 2', checked: true },
-    ];
-
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    const checkboxes = container.querySelectorAll('.treeview-li input[type="checkbox"]');
-    expect(checkboxes.length).toBe(2);
-
-    expect(checkboxes[0].checked).toBe(false);
-    expect(checkboxes[1].checked).toBe(true);
+  test('UpdateExpanded sets expanded and calls callback', () => {
+    const node = new TreeNode({ id: 'n', label: 'Node' });
+    const cb = jest.fn();
+    node.UpdateExpanded(false, cb);
+    expect(node.expanded).toBe(false);
+    expect(cb).toHaveBeenCalledWith(node);
   });
 
-  it('should set the checkbox to false if checked is undefined', () => {
-    const treeData = [
-      { id: 1, label: 'Node 1' }, // No checked property
-      { id: 2, label: 'Node 2', checked: true },
-    ];
-
-    
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    const checkboxes = container.querySelectorAll('.treeview-li input[type="checkbox"]');
-    expect(checkboxes.length).toBe(2);
-    expect(checkboxes[0].checked).toBe(false); // Default to false
-    expect(checkboxes[1].checked).toBe(true);
-  });
-    
-
-  it('should update checkbox state and ancestors on click', () => {
-    const treeData = [
-      {
-        id: 1,
-        label: 'Parent',
-        children: [
-          {id: 2, label: 'Child 1', checked: false},
-          {id: 3, label: 'Child 2', checked: false}
-        ]
-      }
-    ];
-
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-    treeView.expandAll(); // Expand all nodes to ensure checkboxes are visible
-
-    // Find the checkbox for Child 1
-    const child1Checkbox = container.querySelector('li[data-node-id="2"] input[type="checkbox"]');
-
-    // Find the parent checkbox
-    const parentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-
-    // Simulate clicking the Child 1 checkbox
-    child1Checkbox.click()
-
-    // Re-query elements after potential re-render triggered by the click handler
-    const updatedChild1Checkbox = container.querySelector('li[data-node-id="2"] input[type="checkbox"]');
-    const updatedParentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-
-    // Assert Child 1 state
-    expect(updatedChild1Checkbox.checked).toBe(true);
-
-    // Assert Parent state (should be indeterminate)
-    expect(updatedParentCheckbox.checked).toBe(false);
-    expect(updatedParentCheckbox.indeterminate).toBe(true);
-
-    // Now click Child 2 checkbox
-    const child2Checkbox = container.querySelector('li[data-node-id="3"] input[type="checkbox"]');
-    child2Checkbox.click();
-
-    // Re-query parent again
-    const finalParentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-
-    // Assert Parent state (should now be checked)
-    expect(finalParentCheckbox.checked).toBe(true);
-    expect(finalParentCheckbox.indeterminate).toBe(false);
+  test('UpdateExpanded sets expanded when no callback is provided', () => {
+    const node = new TreeNode({ id: 'n', label: 'Node', expanded: true });
+    node.UpdateExpanded(false);
+    expect(node.expanded).toBe(false);
+    node.UpdateExpanded(true);
+    expect(node.expanded).toBe(true);
   });
 
-  it('should update checkbox state to indeterminate for ancestors on click', () =>
-  {
-    const treeData = [
-      {
-        id: 1,
-        label: 'Parent',
-        children: [
-          {id: 2, label: 'Child 1', checked: true},
-          {id: 3, label: 'Child 2', checked: true}
-        ]
-      }
-    ];
-
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-    treeView.expandAll(); // Expand all nodes to ensure checkboxes are visible
-
-    // Find the checkbox for Child 1
-    const child1Checkbox = container.querySelector('li[data-node-id="2"] input[type="checkbox"]');
-
-    // Find the parent checkbox
-    const parentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-    expect(parentCheckbox.checked).toBe(true);
-
-    // Simulate clicking the Child 1 checkbox
-    child1Checkbox.click()
-
-    // Re-query elements after potential re-render triggered by the click handler
-    const updatedChild1Checkbox = container.querySelector('li[data-node-id="2"] input[type="checkbox"]');
-    const updatedParentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-
-    // Assert Child 1 state
-    expect(updatedChild1Checkbox.checked).toBe(false);
-
-    // Assert Parent state (should be indeterminate)
-    expect(updatedParentCheckbox.checked).toBe(false);
-    expect(updatedParentCheckbox.indeterminate).toBe(true);
-
-    // Now click Child 2 checkbox
-    const child2Checkbox = container.querySelector('li[data-node-id="3"] input[type="checkbox"]');
-    child2Checkbox.click();
-
-    // Re-query parent again
-    const finalParentCheckbox = container.querySelector('li[data-node-id="1"] input[type="checkbox"]');
-
-    // Assert Parent state (should now be not checked)
-    expect(finalParentCheckbox.checked).toBe(false);
-    expect(finalParentCheckbox.indeterminate).toBe(false);
+  test('moveTo root with no parent updates root and triggers callback', () => {
+    const node = new TreeNode({ id: 'r', label: 'Root' });
+    const tree = new Tree([node] , eventEmitter);
+    const cb = jest.fn();
+    tree.moveTo(node, null, 0, cb);
+    expect(tree.roots[0]).toBe(node);
+    expect(cb).toHaveBeenCalledWith('r', null, 0);
   });
 
-  it('should expand a branch when its arrow is clicked', () => {
-    const treeData = [
-      {
-        id: 1,
-        label: 'Parent',
-        children: [
-          { id: 2, label: 'Child 1' },
-          { id: 3, label: 'Child 2' }
-        ]
-      }
-    ];
-
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    // The branch should be collapsed initially (children not rendered)
-    let parentLi = container.querySelector('li[data-node-id="1"]');
-    expect(parentLi).not.toBeNull();
-    expect(parentLi.querySelector('ul')).toBeNull();
-
-    // Simulate clicking the arrow to expand
-    const arrow = parentLi.querySelector('.tree-arrow');
-    expect(arrow).not.toBeNull();
-    arrow.click();
-
-    // After click, children should be rendered
-    parentLi = container.querySelector('li[data-node-id="1"]'); // re-query after render
-    const childrenUl = parentLi.querySelector('ul');
-    expect(childrenUl).not.toBeNull();
-    const childLis = childrenUl.querySelectorAll('li[data-node-id]');
-    expect(childLis.length).toBe(2);
-    expect(childLis[0].getAttribute('data-node-id')).toBe('2');
-    expect(childLis[1].getAttribute('data-node-id')).toBe('3');
+  test('removeChild does nothing if child is not present', () => {
+    const notAChild = new TreeNode({ id: 'x', label: 'X' });
+    parent.removeChild(notAChild);
+    expect(parent.children).toEqual([]);
+    expect(notAChild.parent).toBe(null);
   });
 
-  it('should allow dragging and dropping a leaf node to another branch', () => {
-    // Setup tree: Parent1 (with Child1), Parent2 (empty)
-    const treeData = [
-      {
-        id: 1,
-        label: 'Parent 1',
-        children: [
-          { id: 2, label: 'Child 1' }
-        ]
-      },
-      {
-        id: 3,
-        label: 'Parent 2',
-        children: []
-      }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.expandAll();
-    treeView.render();
-
-    // Simulate dragstart on leaf (Child 1)
-    const child1Li = container.querySelector('li[data-node-id="2"]');
-    const parent2Li = container.querySelector('li[data-node-id="3"]');
-    const parent2DropZone = parent2Li.parentElement.querySelector('.drop-zone.after');
-
-    // Mock DataTransfer for drag events
-    const dataTransfer = {
-      data: {},
-      setData(key, value) { this.data[key] = value; },
-      getData(key) { return this.data[key]; }
-    };
-
-    // Drag start on Child 1
-    const dragStartEvent = new Event('dragstart', { bubbles: true });
-    dragStartEvent.dataTransfer = dataTransfer;
-    child1Li.dispatchEvent(dragStartEvent);
-
-    // Drop on Parent 2's drop zone (as child)
-    const dropEvent = new Event('drop', { bubbles: true });
-    dropEvent.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '2'); // Dragged node id
-    parent2Li.dispatchEvent(dropEvent);
-
-    // After drop, Parent 2 should have Child 1 as a child
-    const parent2Node = treeView.findNodeById(treeView.data, 3);
-    expect(parent2Node.children.length).toBe(1);
-    expect(parent2Node.children[0].id).toBe(2);
-    // Parent 1 should have no children
-    const parent1Node = treeView.findNodeById(treeView.data, 1);
-    expect(parent1Node.children.length).toBe(0);
+  test('moveTo does not remove root if already at root and has no parent', () => {
+    const node = new TreeNode({ id: 'r', label: 'Root' });
+    const tree = new Tree([node]);
+    tree.moveTo(node, null, 0);
+    expect(tree.roots).toContain(node);
   });
 
-  it('should allow dropping a node above the first node in a branch', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' },
-      { id: 3, label: 'C' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    // Drag C above A (A is first)
-    const cLi = container.querySelector('li[data-node-id="3"]');
-    const aLi = container.querySelector('li[data-node-id="1"]');
-    const aDropZoneBefore = aLi.previousSibling; // .drop-zone.before
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    cLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '3');
-    aDropZoneBefore.dispatchEvent(drop);
-    // C should now be first
-    expect(treeView.data[0].id).toBe(3);
-    expect(treeView.data[1].id).toBe(1);
-    expect(treeView.data[2].id).toBe(2);
+  test('moveTo clamps root position when too large', () => {
+    const node = new TreeNode({ id: 'a', label: 'A' });
+    const tree = new Tree([]);
+    tree.moveTo(node, null, 100);
+    expect(tree.roots).toContain(node);
   });
 
-  it('should allow dropping a node above a node that is not the first in a branch', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' },
-      { id: 3, label: 'C' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    // Drag C above B (B is not first)
-    const cLi = container.querySelector('li[data-node-id="3"]');
-    const bLi = container.querySelector('li[data-node-id="2"]');
-    const bDropZoneBefore = bLi.previousSibling; // .drop-zone.before
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    cLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '3');
-    bDropZoneBefore.dispatchEvent(drop);
-    // C should now be before B
-    expect(treeView.data[0].id).toBe(1);
-    expect(treeView.data[1].id).toBe(3);
-    expect(treeView.data[2].id).toBe(2);
+  test('moveTo to self is ignored', () => {
+    const node = new TreeNode({ id: 'a', label: 'A' });
+    const tree = new Tree([node]);
+    tree.moveTo(node, node, 0);
+    expect(tree.roots).toContain(node);
   });
 
-  it('should allow dropping a node below a node that is not the last in a branch', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' },
-      { id: 3, label: 'C' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    // Drag A below B (B is not last)
-    const aLi = container.querySelector('li[data-node-id="1"]');
-    const bLi = container.querySelector('li[data-node-id="2"]');
-    const bDropZoneAfter = bLi.nextSibling; // .drop-zone.after
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    aLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '1');
-    bDropZoneAfter.dispatchEvent(drop);
-    // A should now be after B
-    expect(treeView.data[0].id).toBe(2);
-    expect(treeView.data[1].id).toBe(1);
-    expect(treeView.data[2].id).toBe(3);
+  test('moveTo to descendant is ignored', () => {
+    parent.addChild(child);
+    const tree = new Tree([parent]);
+    tree.moveTo(parent, child, 0);
+    expect(child.parent).toBe(parent);
   });
 
-  it('should allow dropping a node below the last node in a branch', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' },
-      { id: 3, label: 'C' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    // Drag A below C (C is last)
-    const aLi = container.querySelector('li[data-node-id="1"]');
-    const cLi = container.querySelector('li[data-node-id="3"]');
-    const cDropZoneAfter = cLi.nextSibling; // .drop-zone.after
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    aLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '1');
-    cDropZoneAfter.dispatchEvent(drop);
-    // A should now be last
-    expect(treeView.data[0].id).toBe(2);
-    expect(treeView.data[1].id).toBe(3);
-    expect(treeView.data[2].id).toBe(1);
+  test('should create a node with label and id', () => {
+    const node = new TreeNode({ id: 'n1', label: 'Node 1' });
+    expect(node.id).toBe('n1');
+    expect(node.label).toBe('Node 1');
+    expect(node.checked).toBe(false);
+    expect(node.expanded).toBe(true);
+    expect(node.children).toEqual([]);
+    expect(node.parent).toBe(null);
   });
 
-  it('should not allow dropping a branch onto one of its descendants', () => {
-    // Tree: A (id:1) > B (id:2) > C (id:3)
-    const treeData = [
-      {
-        id: 1,
-        label: 'A',
-        children: [
-          {
-            id: 2,
-            label: 'B',
-            children: [
-              { id: 3, label: 'C' }
-            ]
-          }
-        ]
-      }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.expandAll();
-    treeView.render();
-
-    // Try to drag A (id:1) and drop it onto C (id:3) as a child
-    const aLi = container.querySelector('li[data-node-id="1"]');
-    const cLi = container.querySelector('li[data-node-id="3"]');
-    const cDropZoneAfter = cLi.nextSibling; // .drop-zone.after
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    aLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '1');
-    cDropZoneAfter.dispatchEvent(drop);
-    // The tree structure should remain unchanged
-    expect(treeView.data[0].id).toBe(1);
-    expect(treeView.data[0].children[0].id).toBe(2);
-    expect(treeView.data[0].children[0].children[0].id).toBe(3);
+  test('should set the parent for child nodes', () => {
+    parent.addChild(child);
+    expect(child.parent).toBe(parent);
   });
 
-  it('should add and remove drag-over/dragging classes on drag events', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-
-    const aLi = container.querySelector('li[data-node-id="1"]');
-
-    // Simulate dragover
-    const dragOverEvent = new Event('dragover', { bubbles: true });
-    aLi.dispatchEvent(dragOverEvent);
-    expect(aLi.classList.contains('drag-over')).toBe(true);
-
-    // Simulate dragleave
-    const dragLeaveEvent = new Event('dragleave', { bubbles: true });
-    aLi.dispatchEvent(dragLeaveEvent);
-    expect(aLi.classList.contains('drag-over')).toBe(false);
-
-    // Simulate dragstart
-    const dragStartEvent = new Event('dragstart', { bubbles: true });
-    dragStartEvent.dataTransfer = { setData: jest.fn() };
-    aLi.dispatchEvent(dragStartEvent);
-    expect(aLi.classList.contains('dragging')).toBe(true);
-
-    // Simulate dragend
-    const dragEndEvent = new Event('dragend', { bubbles: true });
-    aLi.dispatchEvent(dragEndEvent);
-    expect(aLi.classList.contains('dragging')).toBe(false);
+  test('should add a child and set parent reference', () => {
+    parent.addChild(child);
+    expect(parent.children).toContain(child);
+    expect(child.parent).toBe(parent);
   });
 
-  it('should throw an error if container element is not found', () => {
-    expect(() => new TreeView('nonexistent-id', [])).toThrow('Container element with ID "nonexistent-id" not found.');
+  test('should traverse depth-first in correct order', () => {
+    //        root
+    //      /  |   \
+    //    a   b    c
+    //   / \      / \
+    //  d   e    f   g
+    const root = new TreeNode({ id: 'root', label: 'Root' });
+    const a = new TreeNode({ id: 'a', label: 'A' });
+    const b = new TreeNode({ id: 'b', label: 'B' });
+    const c = new TreeNode({ id: 'c', label: 'C' });
+    const d = new TreeNode({ id: 'd', label: 'D' });
+    const e = new TreeNode({ id: 'e', label: 'E' });
+    const f = new TreeNode({ id: 'f', label: 'F' });
+    const g = new TreeNode({ id: 'g', label: 'G' });
+
+    a.addChild(d);
+    a.addChild(e);
+    c.addChild(f);
+    c.addChild(g);
+    root.addChild(a);
+    root.addChild(b);
+    root.addChild(c);
+
+    const result = [];
+    root.traverseDepthFirst(node => result.push(node.id));
+    expect(result).toEqual(['root', 'a', 'd', 'e', 'b', 'c', 'f', 'g']);
   });
 
+  test('should traverse breadth-first in correct order', () => {
+    //        root
+    //      /  |   \
+    //    a   b    c
+    //   / \      / \
+    //  d   e    f   g
+    const root = new TreeNode({ id: 'root', label: 'Root' });
+    const a = new TreeNode({ id: 'a', label: 'A' });
+    const b = new TreeNode({ id: 'b', label: 'B' });
+    const c = new TreeNode({ id: 'c', label: 'C' });
+    const d = new TreeNode({ id: 'd', label: 'D' });
+    const e = new TreeNode({ id: 'e', label: 'E' });
+    const f = new TreeNode({ id: 'f', label: 'F' });
+    const g = new TreeNode({ id: 'g', label: 'G' });
 
-  it('should not render children if node.children is undefined', () => {
-    const treeData = [{ id: 1, label: 'Node 1' }];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-    const nodeLi = container.querySelector('li[data-node-id="1"]');
-    expect(nodeLi).not.toBeNull();
-    expect(nodeLi.querySelector('ul')).toBeNull();
+    a.addChild(d);
+    a.addChild(e);
+    c.addChild(f);
+    c.addChild(g);
+    root.addChild(a);
+    root.addChild(b);
+    root.addChild(c);
+
+    const result = [];
+    root.traverseBreadthFirst(node => result.push(node.id));
+    expect(result).toEqual(['root', 'a', 'b', 'c', 'd', 'e', 'f', 'g']);
   });
 
-  it('should fallback to default label rendering if template is missing', () => {
-    // Remove templates
-    container.querySelectorAll('template').forEach(t => t.remove());
-    const treeData = [{ id: 1, label: 'Node 1' }];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-    const labelSpan = container.querySelector('li[data-node-id="1"] span');
-    expect(labelSpan.textContent).toBe('Node 1');
+  test('should traverse depth-first in post-order', () => {
+    //        root
+    //      /  |   \
+    //    a   b    c
+    //   / \      / \
+    //  d   e    f   g
+    const root = new TreeNode({ id: 'root', label: 'Root' });
+    const a = new TreeNode({ id: 'a', label: 'A' });
+    const b = new TreeNode({ id: 'b', label: 'B' });
+    const c = new TreeNode({ id: 'c', label: 'C' });
+    const d = new TreeNode({ id: 'd', label: 'D' });
+    const e = new TreeNode({ id: 'e', label: 'E' });
+    const f = new TreeNode({ id: 'f', label: 'F' });
+    const g = new TreeNode({ id: 'g', label: 'G' });
+
+    a.addChild(d);
+    a.addChild(e);
+    c.addChild(f);
+    c.addChild(g);
+    root.addChild(a);
+    root.addChild(b);
+    root.addChild(c);
+
+    // Post-order: d, e, a, b, f, g, c, root
+    const result = [];
+    function traversePostOrder(node, cb) {
+      node.children.forEach(child => traversePostOrder(child, cb));
+      cb(node);
+    }
+    traversePostOrder(root, node => result.push(node.id));
+    expect(result).toEqual(['d', 'e', 'a', 'b', 'f', 'g', 'c', 'root']);
   });
 
-  it('should not allow moving a node to itself', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    treeView.render();
-    // Simulate drag and drop of node 1 onto itself
-    const aLi = container.querySelector('li[data-node-id="1"]');
-    const dataTransfer = { data: {}, setData(k,v){this.data[k]=v;}, getData(k){return this.data[k];} };
-    const dragStart = new Event('dragstart', { bubbles: true });
-    dragStart.dataTransfer = dataTransfer;
-    aLi.dispatchEvent(dragStart);
-    const drop = new Event('drop', { bubbles: true });
-    drop.dataTransfer = dataTransfer;
-    dataTransfer.setData('text/plain', '1');
-    aLi.dispatchEvent(drop);
-    // The order should remain unchanged
-    expect(treeView.data[0].id).toBe(1);
-    expect(treeView.data[1].id).toBe(2);
+  test('should update checked state and propagate to children', () => {
+    child.addChild(grandchild);
+    parent.addChild(child);
+
+    parent.setChecked(true);
+    expect(parent.checked).toBe(true);
+    expect(child.checked).toBe(true);
+    expect(grandchild.checked).toBe(true);
   });
 
-  it('should revert move if insertion fails and log error', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    // Patch _insertNodeRelativeToTarget to always fail
-    treeView._insertNodeRelativeToTarget = () => ({ success: false });
-    // Patch _findAndRemoveNode to simulate removal
-    treeView._findAndRemoveNode = () => ({ removedNode: { id: 1, label: 'A' }, parentArray: treeView.data, originalIndex: 0 });
-    // Patch parentMap
-    treeView.parentMap.set(1, null);
-    // Spy on console.error
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    treeView.moveNode(1, 999, 'before');
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to insert node'));
-    errorSpy.mockRestore();
+  test('should update parent indeterminate state', () => {
+    parent.addChild(child1);
+    parent.addChild(child2);
+
+    child1.setChecked(true);
+    expect(parent.isIntermediate()).toBe(true);
+    expect(parent.checked).toBe(false);
   });
 
-  it('should log error if moveNode cannot find or remove dragged node', () => {
-    const treeData = [
-      { id: 1, label: 'A' },
-      { id: 2, label: 'B' }
-    ];
-    const treeView = new TreeView(container.id, treeData);
-    // Patch _findAndRemoveNode to return null
-    treeView._findAndRemoveNode = () => null;
-    // Spy on console.error
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    treeView.moveNode(1, 2, 'before');
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to find or remove dragged node'));
-    errorSpy.mockRestore();
+  test('should remove and insert children correctly', () => {
+    parent.addChild(child1);
+    parent.insertChildAt(child2, 0);
+    expect(parent.children[0]).toBe(child2);
+
+    parent.removeChild(child2);
+    expect(parent.children).not.toContain(child2);
+    expect(child2.parent).toBe(null);
+  });
+});
+
+describe('Tree', () => {
+  let tree, root, a, b, child, n1, n2, eventEmitter;
+
+  beforeEach(() => {
+    eventEmitter = new EventEmitter();
+    root = new TreeNode({ id: 'root', label: 'Root' });
+    a = new TreeNode({ id: 'a', label: 'A' });
+    b = new TreeNode({ id: 'b', label: 'B' });
+    child = new TreeNode({ id: 'child', label: 'Child' });
+    n1 = new TreeNode({ id: 'n1', label: 'Node 1' });
+    n2 = new TreeNode({ id: 'n2', label: 'Node 2' });
+    tree = new Tree([], eventEmitter);
+  });
+
+  test('should add root nodes and find by id', () => {
+    tree.addRoot(n1);
+    tree.addRoot(n2);
+    expect(tree.roots.length).toBe(2);
+    expect(tree.findNodeById('n2')).toBe(n2);
+    expect(tree.findNodeById('notfound')).toBe(null);
+  });
+
+  test('should move node to a different parent', () => {
+    tree = new Tree([root]);
+    root.addChild(a);
+    root.addChild(b);
+
+    tree.moveTo(a, b, 0);
+    expect(b.children[0]).toBe(a);
+    expect(a.parent).toBe(b);
+  });
+
+  test('should not allow move to self or descendant', () => {
+    tree = new Tree([root]);
+    root.addChild(child);
+
+    tree.moveTo(root, child, 0);
+    expect(child.children).not.toContain(root);
+    expect(tree.roots).toContain(root);
+    expect(child.parent).toBe(root);
+  });
+
+  test('should move node to root level', () => {
+    tree = new Tree([root]);
+    root.addChild(child);
+    tree.moveTo(child, null, 0);
+    expect(tree.roots[0]).toBe(child);
+    expect(child.parent).toBe(null);
+    expect(root.children).not.toContain(child);
+  });
+
+  test('moveTo clamps root position to 0 when negative', () => {
+    tree.moveTo(a, null, -10);
+    expect(tree.roots[0]).toBe(a);
+    expect(tree.roots.length).toBe(1);
+  });
+
+  test('moveTo removes node from roots before inserting at new root position', () => {
+    tree = new Tree([n1, n2]);
+    tree.moveTo(n1, null, 1);
+    expect(tree.roots[1]).toBe(n1);
+    expect(tree.roots.length).toBe(2);
+    expect(tree.roots[0]).toBe(n2);
+  });
+
+  test('moveTo calls callback with correct arguments when moving to new parent', () => {
+    tree = new Tree([root]);
+    root.addChild(a);
+    root.addChild(b);
+    const cb = jest.fn();
+    tree.moveTo(a, b, 0, cb);
+    expect(cb).toHaveBeenCalledWith('a', 'b', 0);
+  });
+
+  test('moveTo removes node from roots when moving to a new parent', () => {
+    tree = new Tree([n1, n2]);
+    tree.moveTo(n1, n2, 0);
+    expect(tree.roots).not.toContain(n1);
+    expect(n2.children[0]).toBe(n1);
+    expect(n1.parent).toBe(n2);
+    expect(tree.roots.length).toBe(1);
+    expect(tree.roots[0]).toBe(n2);
+  });
+
+  test('moveTo emits nodeMoved event with correct arguments', () => {
+    const node = new TreeNode({ id: 'n', label: 'Node' });
+    const parent = new TreeNode({ id: 'p', label: 'Parent' });
+
+    const eventEmitter = new EventEmitter();
+    const tree = new Tree([node, parent],  eventEmitter);
+
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeMoved', eventSpy);
+
+    // Move node from root to parent at position 2
+    tree.moveTo(node, parent, 2);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(node);
+    expect(evt.newParent).toBe(parent);
+    expect(evt.position).toBe(2);
+  });
+
+  // Test for moving a node to a root level
+  test('moveTo emits nodeMoved event when moving to root level', () => {
+    const node = new TreeNode({ id: 'n', label: 'Node' });
+    const tree = new Tree([node], eventEmitter);
+    const eventSpy = jest.fn();
+     eventEmitter.on('nodeMoved', eventSpy);
+
+    // Move node to root level
+    tree.moveTo(node, null, 0);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(node);
+    expect(evt.newParent).toBe(null);
+    expect(evt.position).toBe(0);
+  }); 
+
+  test('emits nodeAdded event with correct parent and position when adding as root', () => {
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeAdded', eventSpy);
+
+    tree.addRoot(n1);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(n1);
+    expect(evt.parent).toBe(null);
+    expect(evt.position).toBe(0);
+  });
+
+  test('emits nodeAdded event with correct parent and position when adding as child', () => {
+    tree.addRoot(root);
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeAdded', eventSpy);
+
+    root.addChild(a);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(a);
+    expect(evt.parent).toBe(root);
+    expect(evt.position).toBe(0);
+  });
+
+  test('emits nodeRemoved event with correct node, parent, and position when removing a child', () => {
+    tree.addRoot(root);
+    root.addChild(a);
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeRemoved', eventSpy);
+
+    root.removeChild(a);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(a);
+    expect(evt.parent).toBe(root);
+    expect(evt.position).toBe(0);
+  });
+
+  test('emits nodeChecked event with correct node and checked state when a node is checked', () => {
+    tree.addRoot(root);
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeChecked', eventSpy);
+
+    root.setChecked(true);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    const evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(root);
+    expect(evt.checked).toBe(true);
+  });
+
+  test('emits nodeExpanded event with correct node and expanded state when a node is expanded or collapsed', () => {
+    tree.addRoot(root);
+    const eventSpy = jest.fn();
+    eventEmitter.on('nodeExpanded', eventSpy);
+
+    // Collapse the node
+    root.UpdateExpanded(false);
+
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    let evt = eventSpy.mock.calls[0][0];
+    expect(evt.node).toBe(root);
+    expect(evt.expanded).toBe(false);
+
+    // Expand the node again
+    root.UpdateExpanded(true);
+
+    expect(eventSpy).toHaveBeenCalledTimes(2);
+    evt = eventSpy.mock.calls[1][0];
+    expect(evt.node).toBe(root);
+    expect(evt.expanded).toBe(true);
   });
 });

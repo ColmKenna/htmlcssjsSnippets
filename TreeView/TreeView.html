@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <meta charset="UTF-8" />
+    <title>TreeView</title>
+    <link rel="stylesheet" href="TreeView.css" />
+  </head>
+
+  <body>
+    <div id="treeview-container">
+      <!-- <template class="node-template"> {{label}} {{id}} </template> -->
+    </div>
+
+    <script type="module" src="../EventEmitter/EventEmitter.js"></script>
+    <script type="module" src="./TreeView.js"></script>
+    <script type="module" src="./HtmlTreeView.js"></script>
+    <script type="module">
+      import { TreeNode, Tree } from './TreeView.js';
+      import { HtmlTreeView } from './HtmlTreeView.js';
+      // Example usage:
+      // Create root nodes
+      const root = new TreeNode({
+        id: "1",
+        label: "Project Alpha",
+        checked: false,
+        expanded: true,
+      });
+
+      const root2 = new TreeNode({
+        id: "2",
+        label: "Project Beta",
+        checked: false,
+        expanded: false,
+      });
+
+      // Add children to root
+      const child1 = new TreeNode({
+        id: "1.1",
+        label: "Child 1",
+        checked: false,
+        expanded: true,
+      });
+      const child2 = new TreeNode({
+        id: "1.2",
+        label: "Child 2",
+        checked: false,
+        expanded: true,
+      });
+      root.addChild(child1);
+      root.addChild(child2);
+
+      // Add children to root2
+      const child3 = new TreeNode({
+        id: "2.1",
+        label: "Child 3",
+        checked: false,
+        expanded: true,
+      });
+      root2.addChild(child3);
+
+      // Add grandchildren
+      child1.addChild(
+        new TreeNode({
+          id: "1.1.1",
+          label: "Grandchild 1.1",
+          checked: false,
+          expanded: true,
+          indeterminate: true, // Example of intermediate state
+        })
+      );
+      child1.addChild(
+        new TreeNode({
+          id: "1.1.2",
+          label: "Grandchild 1.2",
+          checked: false,
+          expanded: true,
+        })
+      );
+      child2.addChild(
+        new TreeNode({
+          id: "1.2.1",
+          label: "Grandchild 2.1",
+          checked: false,
+          expanded: true,
+        })
+      );
+
+      // Add grandchildren to root2's child
+      child3.addChild(
+        new TreeNode({
+          id: "2.1.1",
+          label: "Grandchild 3.1",
+          checked: false,
+          expanded: true,
+        })
+      );
+
+      // Create tree and add roots
+      const tree = new Tree();
+      tree.addRoot(root);
+      tree.addRoot(root2);
+
+      // Render
+      new HtmlTreeView("treeview-container", tree);
+    </script>
+  </body>
+</html>
