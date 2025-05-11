@@ -1,0 +1,104 @@
+/* Minimal CSS for better readability */
+#treeview-container ul {
+  list-style-type: none;
+  margin-left: 1em;
+  padding-left: 1em;
+  border-left: 1px dotted #ccc;
+}
+
+#treeview-container li {
+  margin: 0.2em 0;
+  line-height: 1.5;
+}
+
+#treeview-container input[type="checkbox"] {
+  margin-right: 0.4em;
+}
+
+#treeview-container span {
+  cursor: default;
+}
+
+.dropzone {
+  height: 3px;
+  margin: 2px 0;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.dropzone.active {
+  background: #b3e5fc;
+}
+
+/* Replacement for text-transparent */
+.icon-transparent {
+  color: transparent;
+}
+
+/* Expanded/collapsed state for children UL */
+.expanded {
+  display: block;
+}
+.collapsed {
+  display: none;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 0.4em;
+  width: 1em;
+}
+.item-content-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  height: 20px; /* Ensure same height as .tree-node-label */
+  min-height: 20px;
+}
+
+.form-checkbox .form-check-input {
+  opacity: 0;
+  position: absolute;
+}
+
+.form-checkbox .custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #666;
+  margin: 0 0.5rem 0 0;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+  transition: background-color 0.2s, border-color 0.2s;
+  position: relative;
+}
+
+.form-checkbox .custom-checkbox::before {
+  content: "";
+  display: block;
+  width: 80%;
+  height: 80%;
+  background-color: transparent;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.form-checkbox input:checked + .custom-checkbox::before {
+  background-color: #000;
+}
+
+.form-checkbox input:indeterminate + .custom-checkbox::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 4px;
+  background-color: #000;
+  border-radius: 2px;
+}
